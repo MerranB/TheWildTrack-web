@@ -1,4 +1,3 @@
-import React from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
@@ -89,22 +88,25 @@ function Map({ events, loading, error, onMapReady, geoFences }: MapProps) {
               </Polygon>
             ))}
             {events
-              .filter((event) => event.locationLat != null && event.locationLong != null)
+              .filter(
+                (event) =>
+                  event.locationLat != null && event.locationLong != null,
+              )
               .map((event) => (
-              <Marker
-                key={event.id}
-                position={[event.locationLat, event.locationLong]}
-              >
-                <Popup>
-                  <dl aria-label="Sighting details">
-                    <dt>Individual</dt>
-                    <dd>{event.individualId}</dd>
-                    <dt>Time</dt>
-                    <dd>{event.timestamp}</dd>
-                  </dl>
-                </Popup>
-              </Marker>
-            ))}
+                <Marker
+                  key={event.id}
+                  position={[event.locationLat, event.locationLong]}
+                >
+                  <Popup>
+                    <dl aria-label="Sighting details">
+                      <dt>Individual</dt>
+                      <dd>{event.individualId}</dd>
+                      <dt>Time</dt>
+                      <dd>{event.timestamp}</dd>
+                    </dl>
+                  </Popup>
+                </Marker>
+              ))}
           </MarkerClusterGroup>
         )}
       </MapContainer>
