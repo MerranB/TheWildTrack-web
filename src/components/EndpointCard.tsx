@@ -11,6 +11,29 @@ import {
   fetchAllPages,
 } from "../paging";
 
+function statusMessage(data: unknown): string | null {
+  if (typeof data === "string") return data;
+  if (typeof data === "number" || typeof data === "boolean") return String(data);
+  if (data && typeof data === "object") {
+    const body = data as Record<string, unknown>;
+    for (const key of ["message", "detail", "error"]) {
+      if (typeof body[key] === "string") return body[key];
+    }
+  }
+  return null;
+}
+
+/** Parses a response body that may be JSON or plain text. */
+async function readBody(res: Response): Promise<unknown> {
+  const raw = await res.text();
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw;
+  }
+}
+
 function EndpointCard({
   endpoint,
   setEvents,
@@ -105,34 +128,57 @@ function EndpointCard({
     try {
       const { url, options } = buildRequest();
       const res = await fetch(apiUrl(url), options);
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-      const data = await res.json();
+      const data = await readBody(res);
+      const message = statusMessage(data);
+ne.
+      if (!res.ok) {
+        setResponse(
+          `Error ${res.status} ${res.statusText}` +
+            (message ? `\n\n${message}` : ""),
+        );
+        return;
+      }
+
+      // 2xx status-only response, e.g. updateDatabase's ingestion result.
+      if (message !== null) {
+        setResponse(
+          res.status === 200 ? message : `${res.status} ${res.statusText}\n\n${message}`,
+        );
+        return;
+      }
+
+      const body = (data ?? {}) as {
+        content?: unknown[];
+        id?: unknown;
+        locationLat?: number;
+        locationLong?: number;
+      };
 
       if (endpoint.returnsEvents && Array.isArray(data)) {
-        setEvents(data);
+        setEvents(data as Event[]);
         setResponse(`${data.length} events loaded onto map`);
-      } else if (endpoint.returnsEvents && Array.isArray(data.content)) {
-        setEvents(data.content);
-        setResponse(`${data.content.length} events loaded onto map`);
+      } else if (endpoint.returnsEvents && Array.isArray(body.content)) {
+        setEvents(body.content as Event[]);
+        setResponse(`${body.content.length} events loaded onto map`);
       } else if (
         endpoint.returnsEvents &&
-        data.locationLat != null &&
-        data.locationLong != null
+        body.locationLat != null &&
+        body.locationLong != null
       ) {
-        setEvents([data]);
-        flyTo(data.locationLat, data.locationLong);
+        setEvents([body as unknown as Event]);
+        flyTo(body.locationLat, body.locationLong);
         setResponse(JSON.stringify(data, null, 2));
       } else if (endpoint.returnsEvents) {
         setResponse("No events returned");
-      } else if (endpoint.returnsGeoFences && Array.isArray(data.content)) {
-        setGeoFences(data.content);
+      } else if (endpoint.returnsGeoFences && Array.isArray(body.content)) {
+        setGeoFences(body.content as GeoFence[]);
         setResponse(
-          `${data.content.length} geo-fences loaded onto map\n\n${JSON.stringify(data.content, null, 2)}`,
+          `${body.content.length} geo-fences loaded onto map\n\n${JSON.stringify(body.content, null, 2)}`,
         );
-      } else if (endpoint.returnsGeoFences && data.id != null) {
-        setGeoFences([data]);
+      } else if (endpoint.returnsGeoFences && body.id != null) {
+        setGeoFences([body as unknown as GeoFence]);
         setResponse(
-          `Showing geo-fence ${data.id}\n\n${JSON.stringify(data, null, 2)}`,
+          `Showing geo-fence ${body.id}\n\n${JSON.stringify(data, null, 2)}`,
         );
       } else {
         setResponse(JSON.stringify(data, null, 2));

@@ -54,13 +54,9 @@
       {
         method: 'POST',
         path: '/api/v1/events/updateDatabase',
-        description: 'Manually triggers ingestion of the Magnificent Frigatebird dataset from Movebank. This re-fetches and stores the latest data from the Movebank API into the database. The dataset is large, so ingestion is paged — this card requests one page at a time and keeps going until the API reports the last page.',
+        description: 'Manually triggers ingestion of the Magnificent Frigatebird dataset from Movebank. This re-fetches and stores the latest data from the Movebank API into the database. Returns a status message rather than data.',
         returnsEvents: false,
-        paged: true,
-        fields: [
-          { key: 'size', label: 'Page Size', defaultValue: '2000', description: 'Data points ingested per request' },
-          { key: 'page', label: 'Start Page', defaultValue: '0', description: 'Page to start from — paging continues automatically' },
-        ],
+        fields: [],
       },
     ],
     'Natural Language Query': [

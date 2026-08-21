@@ -8,12 +8,12 @@ const mockSetGeoFences = vi.fn();
 const mockFlyTo = vi.fn();
 
 const movebank = endpoints["Movebank Events"];
-const updateDatabase = movebank.find(
-  (e) => e.path === "/api/v1/events/updateDatabase",
-)!;
 const getAll = movebank.find((e) => e.path === "/api/v1/events/all")!;
 const byBox = movebank.find(
   (e) => e.path === "/api/v1/events/allDataPointsByBox",
+)!;
+const geoFences = endpoints["Geo-fence"].find(
+  (e) => e.path === "/api/v1/geoFence" && e.method === "GET",
 )!;
 
 function page(number: number, totalPages: number, size = 2000) {
@@ -83,12 +83,13 @@ describe("paged endpoints", () => {
       .flat()
       .filter((e) => e.paged);
 
+    // updateDatabase is deliberately absent — it returns a status message,
+    // not a Page.
     expect(paged.map((e) => e.path).sort()).toEqual([
       "/api/v1/analysis/query",
       "/api/v1/events/all",
       "/api/v1/events/allDataPointsByBox",
       "/api/v1/events/allDataPointsByRange",
-      "/api/v1/events/updateDatabase",
       "/api/v1/geoFence",
     ]);
 
@@ -101,11 +102,11 @@ describe("paged endpoints", () => {
   it("requests successive pages until the API reports the last one", async () => {
     const fetchMock = servePages(3);
 
-    renderCard(updateDatabase);
+    renderCard(getAll);
     fireEvent.click(screen.getByText("Run"));
 
     await waitFor(() =>
-      expect(screen.getByText(/Ingestion complete/)).toBeInTheDocument(),
+      expect(screen.getByText(/events loaded onto map/)).toBeInTheDocument(),
     );
 
     expect(fetchMock).toHaveBeenCalledTimes(3);
@@ -119,7 +120,6 @@ describe("paged endpoints", () => {
       "2000",
       "2000",
     ]);
-    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: "POST" });
   });
 
   it("concatenates every page onto the map for event endpoints", async () => {
@@ -161,14 +161,34 @@ describe("paged endpoints", () => {
   it("resumes from the Start Page field", async () => {
     const fetchMock = servePages(3);
 
-    renderCard(updateDatabase);
+    renderCard(getAll);
     fireEvent.change(screen.getByDisplayValue("0"), { target: { value: "1" } });
     fireEvent.click(screen.getByText("Run"));
 
     await waitFor(() =>
-      expect(screen.getByText(/Ingestion complete/)).toBeInTheDocument(),
+      expect(screen.getByText(/events loaded onto map/)).toBeInTheDocument(),
     );
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("pages geo-fences onto the map too", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      jsonResponse({
+        content: [{ id: 1, name: "Tortola Zone", coordinates: [] }],
+        number: 0,
+        totalPages: 1,
+        totalElements: 1,
+        last: true,
+      }),
+    );
+
+    renderCard(geoFences);
+    fireEvent.click(screen.getByText("Run"));
+
+    await waitFor(() =>
+      expect(screen.getByText(/geo-fences loaded onto map/)).toBeInTheDocument(),
+    );
+    expect(mockSetGeoFences.mock.lastCall![0]).toHaveLength(1);
   });
 
   it("keeps what it fetched and reports where to resume when rate limited", async () => {
@@ -204,11 +224,11 @@ describe("paged endpoints", () => {
         return jsonResponse({ content: n < 2 ? new Array(2000).fill({}) : [] });
       });
 
-    renderCard(updateDatabase);
+    renderCard(getAll);
     fireEvent.click(screen.getByText("Run"));
 
     await waitFor(() =>
-      expect(screen.getByText(/Ingestion complete/)).toBeInTheDocument(),
+      expect(screen.getByText(/events loaded onto map/)).toBeInTheDocument(),
     );
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
