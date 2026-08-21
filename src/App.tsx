@@ -5,7 +5,12 @@ import Sidebar from "./components/Sidebar";
 import "./App.css";
 import type L from "leaflet";
 import type { GeoFence } from "./types/GeoFence";
-import { apiUrl } from "./api";
+import {
+  DEFAULT_PAGE_SIZE,
+  MAX_MAPPED_ROWS,
+  PagingError,
+  fetchAllPages,
+} from "./paging";
 
 function App() {
   const [events, setEvents] = useState<Event[]>([]);
@@ -25,16 +30,26 @@ function App() {
   }, []);
 
   useEffect(() => {
-    fetch(apiUrl("/api/v1/events/all"))
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch events");
-        return res.json();
-      })
-      .then((data) => {
-        setEvents(data);
+    fetchAllPages<Event>({
+      buildRequest: (page) => ({
+        url: `/api/v1/events/all?page=${page}&size=${DEFAULT_PAGE_SIZE}`,
+      }),
+      maxRows: MAX_MAPPED_ROWS,
+      // Show each page as it lands rather than waiting for the whole walk.
+      onPage: (progress) => {
+        setEvents([...progress.content]);
+        setLoading(false);
+      },
+    })
+      .then((result) => {
+        setEvents(result.content);
         setLoading(false);
       })
       .catch((err) => {
+        // Keep whatever pages did land — a partial map beats an empty one.
+        if (err instanceof PagingError && err.partial.content.length > 0) {
+          setEvents(err.partial.content as Event[]);
+        }
         setError((err as Error).message);
         setLoading(false);
       });

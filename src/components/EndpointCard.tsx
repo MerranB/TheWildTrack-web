@@ -3,6 +3,13 @@ import type { ApiEndpoint } from "../types/ApiEndpoint";
 import type { Event } from "../types/Event";
 import type { GeoFence } from "../types/GeoFence";
 import { apiUrl } from "../api";
+import type { PageResult } from "../paging";
+import {
+  DEFAULT_PAGE_SIZE,
+  MAX_MAPPED_ROWS,
+  PagingError,
+  fetchAllPages,
+} from "../paging";
 
 function EndpointCard({
   endpoint,
@@ -47,47 +54,56 @@ function EndpointCard({
     setFieldValues((prev) => ({ ...prev, [key]: value }));
   }
 
+  function buildRequest(overrides?: Record<string, string>) {
+    let path = endpoint.path;
+    const queryParams: Record<string, string> = {};
+
+    for (const field of endpoint.fields ?? []) {
+      const value = overrides?.[field.key] ?? fieldValues[field.key];
+      if (field.isPathParam) {
+        path = path.replace(`:${field.key}`, value);
+      } else {
+        queryParams[field.key] = value;
+      }
+    }
+
+    let url = path;
+    if (Object.keys(queryParams).length > 0) {
+      url += "?" + new URLSearchParams(queryParams).toString();
+    }
+
+    const options: RequestInit = { method: endpoint.method };
+    if (endpoint.body) {
+      const mergedBody: Record<string, unknown> = { ...endpoint.body };
+      for (const field of endpoint.fields ?? []) {
+        if (!field.isPathParam) {
+          mergedBody[field.key] =
+            overrides?.[field.key] ?? fieldValues[field.key];
+        }
+      }
+      options.headers = { "Content-Type": "application/json" };
+      options.body = JSON.stringify(mergedBody);
+      if (endpoint.hasCoordinates) {
+        const coordList = coords.map((c) => ({
+          lat: parseFloat(c.lat),
+          lon: parseFloat(c.lon),
+        }));
+        coordList.push(coordList[0]);
+        mergedBody.coordinates = coordList;
+        options.body = JSON.stringify(mergedBody);
+      }
+    }
+
+    return { url, options };
+  }
+
   async function runEndpoint() {
+    if (endpoint.paged) return runPaged();
+
     setRunning(true);
     setResponse(null);
     try {
-      let path = endpoint.path;
-      const queryParams: Record<string, string> = {};
-
-      for (const field of endpoint.fields ?? []) {
-        if (field.isPathParam) {
-          path = path.replace(`:${field.key}`, fieldValues[field.key]);
-        } else {
-          queryParams[field.key] = fieldValues[field.key];
-        }
-      }
-
-      let url = path;
-      if (Object.keys(queryParams).length > 0) {
-        url += "?" + new URLSearchParams(queryParams).toString();
-      }
-
-      const options: RequestInit = { method: endpoint.method };
-      if (endpoint.body) {
-        const mergedBody: Record<string, unknown> = { ...endpoint.body };
-        for (const field of endpoint.fields ?? []) {
-          if (!field.isPathParam) {
-            mergedBody[field.key] = fieldValues[field.key];
-          }
-        }
-        options.headers = { "Content-Type": "application/json" };
-        options.body = JSON.stringify(mergedBody);
-        if (endpoint.hasCoordinates) {
-          const coordList = coords.map((c) => ({
-            lat: parseFloat(c.lat),
-            lon: parseFloat(c.lon),
-          }));
-          coordList.push(coordList[0]);
-          mergedBody.coordinates = coordList;
-          options.body = JSON.stringify(mergedBody);
-        }
-      }
-
+      const { url, options } = buildRequest();
       const res = await fetch(apiUrl(url), options);
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
       const data = await res.json();
@@ -123,6 +139,68 @@ function EndpointCard({
       }
     } catch (err) {
       setResponse("Error: " + (err as Error).message);
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  async function runPaged() {
+    setRunning(true);
+    setResponse(null);
+
+    const size = fieldValues.size?.trim() || String(DEFAULT_PAGE_SIZE);
+    const startPage = Math.max(0, parseInt(fieldValues.page, 10) || 0);
+    const noun = endpoint.returnsGeoFences
+      ? "geo-fences"
+      : endpoint.returnsEvents
+        ? "events"
+        : "rows";
+
+    const mapped = endpoint.returnsEvents || endpoint.returnsGeoFences;
+
+    function publish(result: PageResult<unknown>) {
+      if (endpoint.returnsEvents) setEvents(result.content as Event[]);
+      else if (endpoint.returnsGeoFences)
+        setGeoFences(result.content as GeoFence[]);
+    }
+
+    try {
+      const result = await fetchAllPages<unknown>({
+        buildRequest: (page) => buildRequest({ page: String(page), size }),
+        startPage,
+        maxRows: mapped ? MAX_MAPPED_ROWS : Infinity,
+        onPage: (progress) =>
+          setResponse(
+            `Fetching page ${progress.nextPage} of ${progress.totalPages ?? "?"} — ${progress.content.length.toLocaleString()}${progress.totalElements != null ? ` of ${progress.totalElements.toLocaleString()}` : ""} ${noun} so far...`,
+          ),
+      });
+
+      publish(result);
+      setResponse(
+        [
+          mapped
+            ? `${result.content.length.toLocaleString()} ${noun} loaded onto map — ${result.pagesDone} page(s) of ${size}.`
+            : `Ingestion ${result.capped ? "stopped early" : "complete"} — ${result.pagesDone} page(s) of ${size}.`,
+          result.totalElements != null
+            ? `API reported ${result.totalElements.toLocaleString()} total ${noun}.`
+            : null,
+          result.capped
+            ? `${result.capped} Re-run with Start Page ${result.nextPage} to continue.`
+            : null,
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      );
+    } catch (err) {
+      const partial =
+        err instanceof PagingError
+          ? (err.partial as PageResult<unknown>)
+          : null;
+      if (partial?.content.length) publish(partial);
+
+      setResponse(
+        `Error: ${(err as Error).message}\n\nKept ${(partial?.content.length ?? 0).toLocaleString()} ${noun} from ${partial?.pagesDone ?? 0} page(s) before stopping. Re-run with Start Page ${partial?.nextPage ?? startPage} to resume.`,
+      );
     } finally {
       setRunning(false);
     }

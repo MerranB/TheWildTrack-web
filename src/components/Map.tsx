@@ -40,6 +40,9 @@ function Map({ events, loading, error, onMapReady, geoFences }: MapProps) {
   const position: [number, number] = [18.4, -64.6];
   const zoomLevel = 10;
 
+  const points = Array.isArray(events) ? events : [];
+  const fences = Array.isArray(geoFences) ? geoFences : [];
+
   if (error) return <div role="alert">Error: {error}</div>;
 
   return (
@@ -65,7 +68,7 @@ function Map({ events, loading, error, onMapReady, geoFences }: MapProps) {
         <MapController onMapReady={onMapReady} />
         {loading === false && (
           <MarkerClusterGroup>
-            {geoFences.map((fence) => (
+            {fences.map((fence) => (
               <Polygon
                 key={fence.id}
                 positions={fence.coordinates.map(
@@ -87,7 +90,7 @@ function Map({ events, loading, error, onMapReady, geoFences }: MapProps) {
                 </Popup>
               </Polygon>
             ))}
-            {events
+            {points
               .filter(
                 (event) =>
                   event.locationLat != null && event.locationLong != null,

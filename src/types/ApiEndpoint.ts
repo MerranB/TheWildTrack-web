@@ -16,4 +16,5 @@
     returnsEvents: boolean
     returnsGeoFences?: boolean
     hasCoordinates?: boolean
+    paged?: boolean
   }
