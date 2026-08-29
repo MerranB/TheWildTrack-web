@@ -14,6 +14,7 @@
     fields: ApiField[]
     body?: Record<string, unknown>
     returnsEvents: boolean
+    adminOnly?: boolean
     returnsGeoFences?: boolean
     hasCoordinates?: boolean
     paged?: boolean

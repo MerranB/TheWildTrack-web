@@ -50,8 +50,9 @@
       {
         method: 'POST',
         path: '/api/v1/events/updateDatabase',
-        description: 'Manually triggers ingestion of every Movebank study the backend is configured to track. This re-fetches and stores the latest data from the Movebank API into the database. Returns a status message rather than data.',
+        description: 'Manually triggers ingestion of every Movebank study the backend is configured to track. This re-fetches and stores the latest data from the Movebank API into the database. Returns a status message rather than data. Admin only: running this asks for an admin username and password first, because ingestion writes millions of rows to the live database.',
         returnsEvents: false,
+        adminOnly: true,
         fields: [],
       },
     ],
@@ -59,8 +60,9 @@
       {
         method: 'GET',
         path: '/api/v1/analysis/query',
-        description: 'Accepts a plain-English query, uses Claude Haiku 4.5 to extract spatial and temporal parameters, and returns matching telemetry events. Runs against whichever studies are currently loaded, so the hotspot pins are the quickest way to see what is available before querying.',
+        description: 'Accepts a plain-English query, uses Claude Haiku 4.5 to extract spatial and temporal parameters, and returns matching telemetry events. Runs against whichever studies are currently loaded, so the hotspot pins are the quickest way to see what is available before querying. Admin only: running this asks for an admin username and password first, because every query bills a call to the Claude API.',
         returnsEvents: true,
+        adminOnly: true,
         paged: true,
         fields: [
           { key: 'userPrompt', label: 'Query', defaultValue: 'Show frigatebirds near Tortola after 2015', description:
@@ -112,8 +114,9 @@
       {
         method: 'PUT',
         path: '/api/v1/geoFence/:id',
-        description: 'Updates an existing geo-fence by ID.',
+        description: 'Updates an existing geo-fence by ID. Admin only: running this asks for an admin username and password first. Creating a geo-fence stays open to everyone, so any visitor can add one, but only an admin can change it afterwards.',
         returnsEvents: false,
+        adminOnly: true,
         returnsGeoFences: true,
         fields: [
           { key: 'id', label: 'ID', defaultValue: '1', description: 'Geo-fence ID to update', isPathParam: true },
@@ -129,8 +132,9 @@
       {
         method: 'DELETE',
         path: '/api/v1/geoFence/:id',
-        description: 'Deletes a geo-fence by its database ID.',
+        description: 'Deletes a geo-fence by its database ID. Admin only: running this asks for an admin username and password first, so a visitor cannot remove geo-fences that other people created.',
         returnsEvents: false,
+        adminOnly: true,
         fields: [
           { key: 'id', label: 'ID', defaultValue: '1', description: 'Geo-fence ID to delete', isPathParam: true },
         ],

@@ -3,6 +3,7 @@ import type { ApiEndpoint } from "../types/ApiEndpoint";
 import type { Event } from "../types/Event";
 import type { GeoFence } from "../types/GeoFence";
 import { apiUrl } from "../api";
+import { authorizedFetch, login } from "../auth";
 import type { PageResult } from "../paging";
 import {
   DEFAULT_PAGE_SIZE,
@@ -54,6 +55,11 @@ function EndpointCard({
   );
   const [response, setResponse] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
+  const [needsLogin, setNeedsLogin] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [loggingIn, setLoggingIn] = useState(false);
   const [coords, setCoords] = useState([
     { lat: "19.5", lon: "-66.0" },
     { lat: "17.5", lon: "-66.0" },
@@ -128,7 +134,14 @@ function EndpointCard({
     setResponse(null);
     try {
       const { url, options } = buildRequest();
-      const res = await fetch(apiUrl(url), options);
+      const res = await authorizedFetch(apiUrl(url), options);
+
+      if (res.status === 401) {
+        setNeedsLogin(true);
+        setResponse("This endpoint is admin only. Log in below to run it.");
+        return;
+      }
+
       const data = await readBody(res);
       const message = statusMessage(data);
 
@@ -241,6 +254,12 @@ function EndpointCard({
           .join("\n"),
       );
     } catch (err) {
+      if (err instanceof PagingError && err.status === 401) {
+        setNeedsLogin(true);
+        setResponse("This endpoint is admin only. Log in below to run it.");
+        return;
+      }
+
       const partial =
         err instanceof PagingError
           ? (err.partial as PageResult<unknown>)
@@ -252,6 +271,22 @@ function EndpointCard({
       );
     } finally {
       setRunning(false);
+    }
+  }
+
+  async function submitLogin() {
+    setLoggingIn(true);
+    setLoginError(null);
+    try {
+      await login(username, password);
+      // The password has done its job. Only the token it returned is kept.
+      setPassword("");
+      setNeedsLogin(false);
+      await runEndpoint();
+    } catch (err) {
+      setLoginError((err as Error).message);
+    } finally {
+      setLoggingIn(false);
     }
   }
 
@@ -281,6 +316,21 @@ function EndpointCard({
         <code style={{ fontSize: 11, color: "#ddd", flex: 1 }}>
           {endpoint.path}
         </code>
+        {endpoint.adminOnly && (
+          <span
+            title="Requires an admin login"
+            style={{
+              fontSize: 9,
+              color: "#fca130",
+              border: "1px solid #fca130",
+              borderRadius: 3,
+              padding: "1px 4px",
+              flexShrink: 0,
+            }}
+          >
+            ADMIN
+          </span>
+        )}
         <span style={{ fontSize: 12, color: "#aaa" }}>
           {expanded ? "▲" : "▼"}
         </span>
@@ -379,6 +429,55 @@ function EndpointCard({
               >
                 + Add Point
               </button>
+            </div>
+          )}
+
+          {needsLogin && (
+            <div
+              style={{
+                border: "1px solid #fca130",
+                borderRadius: 4,
+                padding: 8,
+                marginBottom: 8,
+              }}
+            >
+              <p style={{ fontSize: 11, color: "#fca130", margin: "0 0 6px" }}>
+                Admin login required. The password is sent once to get a token
+                that lasts 15 minutes, and is not stored by this page.
+              </p>
+              <input
+                aria-label="Admin username"
+                placeholder="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="endpoint-input"
+                style={{ marginBottom: 4 }}
+              />
+              <input
+                aria-label="Admin password"
+                placeholder="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && username && password) submitLogin();
+                }}
+                className="endpoint-input"
+                style={{ marginBottom: 6 }}
+              />
+              <button
+                onClick={submitLogin}
+                disabled={loggingIn || !username || !password}
+                className="endpoint-run"
+                style={{ cursor: loggingIn ? "not-allowed" : "pointer" }}
+              >
+                {loggingIn ? "Logging in..." : "Log in and run"}
+              </button>
+              {loginError && (
+                <p style={{ fontSize: 11, color: "#f93e3e", margin: "6px 0 0" }}>
+                  {loginError}
+                </p>
+              )}
             </div>
           )}
 
