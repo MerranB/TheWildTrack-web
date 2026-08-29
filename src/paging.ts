@@ -3,13 +3,13 @@ import { apiUrl } from "./api";
 export const DEFAULT_PAGE_SIZE = 2000;
 // Backstop so a malformed response can never spin the loop forever.
 export const MAX_PAGES = 1000;
-// Ceiling on markers handed to Leaflet in one run — past this the tab locks up.
+// Ceiling on rows handed to the map in one run. Past this the tab locks up.
 export const MAX_MAPPED_ROWS = 50000;
 
 export interface PageResult<T> {
   content: T[];
   pagesDone: number;
-  /** Page to resume from — the first one not successfully consumed. */
+  /** Page to resume from: the first one not successfully consumed. */
   nextPage: number;
   totalElements: number | null;
   totalPages: number | null;
@@ -86,7 +86,7 @@ export async function fetchAllPages<T>({
 
     if (res.status === 429) {
       throw new PagingError(
-        `429 rate limited after ${result.pagesDone} page(s) — the API caps calls to this endpoint per day.`,
+        `429 rate limited after ${result.pagesDone} page(s). The API caps calls to this endpoint per day.`,
         result,
       );
     }

@@ -6,7 +6,15 @@ const mockSetEvents = vi.fn();
 const mockSetGeoFences = vi.fn();
 const mockFlyTo = vi.fn();
 
-const getEventsEndpoint = endpoints["Movebank Events"][0];
+// Looked up by path rather than by index so reordering the explorer cards cannot
+// silently point these tests at a different endpoint.
+function endpointByPath(path: string) {
+  const match = endpoints["Movebank Events"].find((e) => e.path === path);
+  if (!match) throw new Error(`No endpoint registered for ${path}`);
+  return match;
+}
+
+const getEventsEndpoint = endpointByPath("/api/v1/events/hotspots");
 
 describe("EndpointCard", () => {
   it("renders method and path", () => {
@@ -19,7 +27,7 @@ describe("EndpointCard", () => {
       />,
     );
     expect(screen.getByText("GET")).toBeInTheDocument();
-    expect(screen.getByText("/api/v1/events/all")).toBeInTheDocument();
+    expect(screen.getByText("/api/v1/events/hotspots")).toBeInTheDocument();
   });
 
   it("expands when clicked", () => {
@@ -50,7 +58,7 @@ describe("EndpointCard", () => {
   });
 
   it("updates field value when typed into", () => {
-    const endpointWithField = endpoints["Movebank Events"][1];
+    const endpointWithField = endpointByPath("/api/v1/events/:id");
     render(
       <EndpointCard
         endpoint={endpointWithField}
@@ -75,7 +83,7 @@ describe("EndpointCard", () => {
       />,
     );
     const toggleButton = screen.getByRole("button", {
-      name: /GET \/api\/v1\/events\/all/i,
+      name: /GET \/api\/v1\/events\/hotspots/i,
     });
     fireEvent.click(toggleButton);
     expect(screen.getByText("Run")).toBeInTheDocument();

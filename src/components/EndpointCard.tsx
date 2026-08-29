@@ -13,7 +13,8 @@ import {
 
 function statusMessage(data: unknown): string | null {
   if (typeof data === "string") return data;
-  if (typeof data === "number" || typeof data === "boolean") return String(data);
+  if (typeof data === "number" || typeof data === "boolean")
+    return String(data);
   if (data && typeof data === "object") {
     const body = data as Record<string, unknown>;
     for (const key of ["message", "detail", "error"]) {
@@ -130,7 +131,7 @@ function EndpointCard({
       const res = await fetch(apiUrl(url), options);
       const data = await readBody(res);
       const message = statusMessage(data);
-ne.
+
       if (!res.ok) {
         setResponse(
           `Error ${res.status} ${res.statusText}` +
@@ -142,7 +143,9 @@ ne.
       // 2xx status-only response, e.g. updateDatabase's ingestion result.
       if (message !== null) {
         setResponse(
-          res.status === 200 ? message : `${res.status} ${res.statusText}\n\n${message}`,
+          res.status === 200
+            ? message
+            : `${res.status} ${res.statusText}\n\n${message}`,
         );
         return;
       }
@@ -217,7 +220,7 @@ ne.
         maxRows: mapped ? MAX_MAPPED_ROWS : Infinity,
         onPage: (progress) =>
           setResponse(
-            `Fetching page ${progress.nextPage} of ${progress.totalPages ?? "?"} — ${progress.content.length.toLocaleString()}${progress.totalElements != null ? ` of ${progress.totalElements.toLocaleString()}` : ""} ${noun} so far...`,
+            `Fetching page ${progress.nextPage} of ${progress.totalPages ?? "?"}, ${progress.content.length.toLocaleString()}${progress.totalElements != null ? ` of ${progress.totalElements.toLocaleString()}` : ""} ${noun} so far...`,
           ),
       });
 
@@ -225,8 +228,8 @@ ne.
       setResponse(
         [
           mapped
-            ? `${result.content.length.toLocaleString()} ${noun} loaded onto map — ${result.pagesDone} page(s) of ${size}.`
-            : `Ingestion ${result.capped ? "stopped early" : "complete"} — ${result.pagesDone} page(s) of ${size}.`,
+            ? `${result.content.length.toLocaleString()} ${noun} loaded onto map from ${result.pagesDone} page(s) of ${size}.`
+            : `Ingestion ${result.capped ? "stopped early" : "complete"} after ${result.pagesDone} page(s) of ${size}.`,
           result.totalElements != null
             ? `API reported ${result.totalElements.toLocaleString()} total ${noun}.`
             : null,
@@ -295,7 +298,7 @@ ne.
                 htmlFor={`field-${field.key}`}
                 style={{ fontSize: 11, color: "#888", display: "block" }}
               >
-                {field.label} —{" "}
+                {field.label}:{" "}
                 <span style={{ fontStyle: "italic" }}>{field.description}</span>
               </label>
               <input

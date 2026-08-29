@@ -4,14 +4,10 @@
     'Movebank Events': [
       {
         method: 'GET',
-        path: '/api/v1/events/all',
-        description: 'Returns all wildlife telemetry events in the database. Paged — this card walks every page and loads the combined result onto the map.',
-        returnsEvents: true,
-        paged: true,
-        fields: [
-          { key: 'size', label: 'Page Size', defaultValue: '2000', description: 'Events fetched per request' },
-          { key: 'page', label: 'Start Page', defaultValue: '0', description: 'Page to start from — paging continues automatically' },
-        ],
+        path: '/api/v1/events/hotspots',
+        description: 'Coarse density summary of the entire dataset, with one entry per populated region and its fix count. This is what places the pins on the map at world zoom, so a first-time visitor can see where the data actually is. One aggregate query over every row, cached until the next ingestion.',
+        returnsEvents: false,
+        fields: [],
       },
       {
         method: 'GET',
@@ -25,7 +21,7 @@
       {
         method: 'GET',
         path: '/api/v1/events/allDataPointsByRange',
-        description: 'Returns all telemetry events within a given radius (in degrees) of a coordinate point. Uses a PostGIS spatial query. 1 degree is approximately 111km. Paged — this card walks every page and loads the combined result onto the map.',
+        description: 'Returns all telemetry events within a given radius (in degrees) of a coordinate point. Uses a PostGIS spatial query. 1 degree is approximately 111km. Paged: this card walks every page and loads the combined result onto the map.',
         returnsEvents: true,
         paged: true,
         fields: [
@@ -33,13 +29,13 @@
           { key: 'lon', label: 'Longitude', defaultValue: '-64.6235', description: 'Center point longitude' },
           { key: 'range', label: 'Range (degrees)', defaultValue: '1', description: '1 degree ≈ 111km' },
           { key: 'size', label: 'Page Size', defaultValue: '2000', description: 'Results per request' },
-          { key: 'page', label: 'Start Page', defaultValue: '0', description: 'Page to start from — paging continues automatically' },
+          { key: 'page', label: 'Start Page', defaultValue: '0', description: 'Page to start from (paging continues automatically)' },
         ],
       },
       {
         method: 'GET',
         path: '/api/v1/events/allDataPointsByBox',
-        description: 'Returns all telemetry events within a geographic bounding box. Uses a PostGIS spatial query. Paged — this card walks every page and loads the combined result onto the map.',
+        description: 'Returns all telemetry events within a geographic bounding box. Uses a PostGIS spatial query. Paged: this card walks every page and loads the combined result onto the map.',
         returnsEvents: true,
         paged: true,
         fields: [
@@ -48,13 +44,13 @@
           { key: 'minLon', label: 'Min Longitude', defaultValue: '-64.8', description: 'Western boundary' },
           { key: 'maxLon', label: 'Max Longitude', defaultValue: '-64.4', description: 'Eastern boundary' },
           { key: 'size', label: 'Page Size', defaultValue: '2000', description: 'Results per request' },
-          { key: 'page', label: 'Start Page', defaultValue: '0', description: 'Page to start from — paging continues automatically' },
+          { key: 'page', label: 'Start Page', defaultValue: '0', description: 'Page to start from (paging continues automatically)' },
         ],
       },
       {
         method: 'POST',
         path: '/api/v1/events/updateDatabase',
-        description: 'Manually triggers ingestion of the Magnificent Frigatebird dataset from Movebank. This re-fetches and stores the latest data from the Movebank API into the database. Returns a status message rather than data.',
+        description: 'Manually triggers ingestion of every Movebank study the backend is configured to track. This re-fetches and stores the latest data from the Movebank API into the database. Returns a status message rather than data.',
         returnsEvents: false,
         fields: [],
       },
@@ -63,14 +59,14 @@
       {
         method: 'GET',
         path: '/api/v1/analysis/query',
-        description: 'Accepts a plain-English query, uses Claude Haiku 4.5 to extract spatial and temporal parameters, and returns matching telemetry events. Dataset covers Magnificent Frigatebird GPS tracking near the British Virgin Islands, 2014–2016.',
+        description: 'Accepts a plain-English query, uses Claude Haiku 4.5 to extract spatial and temporal parameters, and returns matching telemetry events. Runs against whichever studies are currently loaded, so the hotspot pins are the quickest way to see what is available before querying.',
         returnsEvents: true,
         paged: true,
         fields: [
           { key: 'userPrompt', label: 'Query', defaultValue: 'Show frigatebirds near Tortola after 2015', description:
           'A plain-English location and/or time query' },
           { key: 'size', label: 'Page Size', defaultValue: '2000', description: 'Results per request' },
-          { key: 'page', label: 'Start Page', defaultValue: '0', description: 'Page to start from — paging continues automatically' },
+          { key: 'page', label: 'Start Page', defaultValue: '0', description: 'Page to start from (paging continues automatically)' },
         ],
       },
     ],
@@ -84,7 +80,7 @@
         paged: true,
         fields: [
           { key: 'size', label: 'Page Size', defaultValue: '2000', description: 'Results per request' },
-          { key: 'page', label: 'Start Page', defaultValue: '0', description: 'Page to start from — paging continues automatically' },
+          { key: 'page', label: 'Start Page', defaultValue: '0', description: 'Page to start from (paging continues automatically)' },
         ],
       },
       {
@@ -100,7 +96,7 @@
       {
         method: 'POST',
         path: '/api/v1/geoFence',
-        description: 'Creates a new geo-fence. Note: the scheduled alert trigger is disabled in this environment as the dataset is historical (2014–2016). Use the Demo endpoint to see geo-fence alerts in action.',
+        description: 'Creates a new geo-fence. Note: the scheduled alert trigger is disabled in this environment as the dataset is historical. Use the Demo endpoint to see geo-fence alerts in action.',
         returnsEvents: false,
         fields: [
           { key: 'name', label: 'Name', defaultValue: 'Tortola Zone', description: 'Geo-fence name' },
@@ -144,7 +140,7 @@
       {
         method: 'POST',
         path: '/api/v1/demo',
-        description: 'Demonstrates the geo-fence alert feature with simulated data. Since the dataset is historical (2014–2016), real movement events will never trigger alerts — this endpoint simulates that process so you can see the full geo-fence alert pipeline in action.',
+        description: 'Demonstrates the geo-fence alert feature with simulated data. Since the dataset is historical, real movement events will never trigger alerts. This endpoint simulates that process so you can see the full geo-fence alert pipeline in action.',
         returnsEvents: false,
          fields: [ { key: 'email', label: 'Email', defaultValue: 'your@email.com', description: 'Email address to receive the demo geo-fence alert' },
   ],
