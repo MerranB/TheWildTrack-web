@@ -60,9 +60,8 @@
       {
         method: 'GET',
         path: '/api/v1/analysis/query',
-        description: 'Accepts a plain-English query, uses Claude Haiku 4.5 to extract spatial and temporal parameters, and returns matching telemetry events. Runs against whichever studies are currently loaded, so the hotspot pins are the quickest way to see what is available before querying. Admin only: running this asks for an admin username and password first, because every query bills a call to the Claude API.',
+        description: 'Accepts a plain-English query, uses Claude Haiku 4.5 to extract spatial and temporal parameters, and returns matching telemetry events. Runs against whichever studies are currently loaded, so the hotspot pins are the quickest way to see what is available before querying.',
         returnsEvents: true,
-        adminOnly: true,
         paged: true,
         fields: [
           { key: 'userPrompt', label: 'Query', defaultValue: 'Show frigatebirds near Tortola after 2015', description:
