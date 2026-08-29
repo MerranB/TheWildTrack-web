@@ -1,18 +1,24 @@
 # WildTrack
 
-A wildlife telemetry visualization tool. Plots real GPS tracking data from Magnificent Frigatebirds in the British Virgin Islands (2014–2016) on an interactive map, with a built-in API explorer for recruiters to interact with the backend directly.
+A wildlife telemetry visualization tool. Plots real GPS tracking data from the Movebank research platform on an interactive map, with a built-in API explorer for recruiters to interact with the backend directly.
+
+The app is dataset-agnostic: which studies are loaded is configuration, and they are swapped out regularly. Nothing in the frontend or the API is tied to a particular species, region, or date range. See [Dataset](#dataset) for what is loaded now.
 
 ## Tech Stack
 
-**Frontend:** React 19, TypeScript, Vite, React-Leaflet, React-Leaflet-Cluster  
+**Frontend:** React 19, TypeScript, Vite, MapLibre GL JS (Mapbox Vector Tiles)  
 **Backend:** Spring Boot, PostGIS, Movebank API, Claude Haiku 4.5 (natural language queries)  
 **Infrastructure:** AWS
 
 ## Features
 
-- Interactive map with clustered markers from 9,000+ real telemetry events
-- Collapsible API Explorer panel with all 12 backend endpoints
-- Pre-filled example values so anyway can run queries without prior knowledge
+- Interactive map that renders the entire loaded dataset as server-generated vector
+  tiles, aggregated per zoom level, so the browser never holds more than the current
+  viewport (tested at 2.6M events)
+- Hotspot pins showing where the data actually is, since telemetry studies tend to be
+  heavily concentrated and a world view would otherwise look empty
+- Collapsible API Explorer panel covering the backend endpoints
+- Pre-filled example values so anyone can run queries without prior knowledge
 - Natural language query interface powered by Claude Haiku 4.5
 - Geo-fence creation and alert demo
 
@@ -49,8 +55,10 @@ See the backend repository: [GitHub/MerranB/WildTrack](https://github.com/Merran
 
 | Method | Endpoint                              | Description                                |
 | ------ | ------------------------------------- | ------------------------------------------ |
-| GET    | `/api/v1/events`                      | Get all telemetry events (paginated)       |
+| GET    | `/api/v1/events/all`                  | Get all telemetry events (paginated)       |
 | GET    | `/api/v1/events/{id}`                 | Get a single event by ID                   |
+| GET    | `/api/v1/events/tiles/{z}/{x}/{y}.mvt`| Mapbox Vector Tile for a map tile, built by PostGIS |
+| GET    | `/api/v1/events/hotspots`             | Coarse density summary of the whole dataset |
 | GET    | `/api/v1/events/allDataPointsByRange` | Query events by radius using PostGIS       |
 | GET    | `/api/v1/events/allDataPointsByBox`   | Query events by bounding box using PostGIS |
 | POST   | `/api/v1/events/updateDatabase`       | Trigger manual Movebank data ingestion     |
@@ -79,4 +87,14 @@ See the backend repository: [GitHub/MerranB/WildTrack](https://github.com/Merran
 
 ## Dataset
 
-Animal tracking data from "Magnificent Frigatebird_BVI_GPS-PTT_2014-2016" by Jodice, P.G.R., K. Meyer, S. Zaluski, and L. Soanes. Acknowledgements: RSPB, National Parks Trust of the Virgin Islands and BVI Department of Conservation & Fisheries. Licensed under CC BY 4.0. Data ingested and transformed for use in WildTrack application.
+All data comes from [Movebank](https://www.movebank.org/) and is ingested and
+transformed for use in the WildTrack application. Which studies are loaded changes
+over time; each one currently loaded is credited below, along with its licence.
+
+- **Magnificent Frigatebird_BVI_GPS-PTT_2014-2016** by Jodice, P.G.R., K. Meyer,
+  S. Zaluski, and L. Soanes. Acknowledgements: RSPB, National Parks Trust of the
+  Virgin Islands and BVI Department of Conservation & Fisheries. Licensed under
+  CC BY 4.0.
+
+When a study is added or removed, add or remove its entry here. Attribution is a
+licence condition for CC BY data, not a formality.

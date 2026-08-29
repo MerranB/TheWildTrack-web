@@ -6,6 +6,17 @@ export default defineConfig({
     resolve: {
     dedupe: ['react', 'react-dom'],
   },
+  // maplibre-gl ships its own ES module Web Worker. Vite's dependency pre-bundling
+  // rewrites it into .vite/deps/ and serves it with an empty MIME type, which the
+  // browser refuses to execute — the map then renders the basemap but can never
+  // process any source data, because all geometry parsing happens in that worker.
+  // The package is already ESM, so there is nothing to gain from pre-bundling it.
+  optimizeDeps: {
+    exclude: ['maplibre-gl'],
+  },
+  worker: {
+    format: 'es',
+  },
   base: '/',
   server: {
     proxy: {

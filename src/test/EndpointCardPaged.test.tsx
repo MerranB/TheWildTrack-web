@@ -8,7 +8,9 @@ const mockSetGeoFences = vi.fn();
 const mockFlyTo = vi.fn();
 
 const movebank = endpoints["Movebank Events"];
-const getAll = movebank.find((e) => e.path === "/api/v1/events/all")!;
+const pagedEvents = movebank.find(
+  (e) => e.path === "/api/v1/events/allDataPointsByRange",
+)!;
 const byBox = movebank.find(
   (e) => e.path === "/api/v1/events/allDataPointsByBox",
 )!;
@@ -83,11 +85,10 @@ describe("paged endpoints", () => {
       .flat()
       .filter((e) => e.paged);
 
-    // updateDatabase is deliberately absent — it returns a status message,
+    // updateDatabase is deliberately absent because it returns a status message,
     // not a Page.
     expect(paged.map((e) => e.path).sort()).toEqual([
       "/api/v1/analysis/query",
-      "/api/v1/events/all",
       "/api/v1/events/allDataPointsByBox",
       "/api/v1/events/allDataPointsByRange",
       "/api/v1/geoFence",
@@ -102,7 +103,7 @@ describe("paged endpoints", () => {
   it("requests successive pages until the API reports the last one", async () => {
     const fetchMock = servePages(3);
 
-    renderCard(getAll);
+    renderCard(pagedEvents);
     fireEvent.click(screen.getByText("Run"));
 
     await waitFor(() =>
@@ -125,7 +126,7 @@ describe("paged endpoints", () => {
   it("concatenates every page onto the map for event endpoints", async () => {
     servePages(3);
 
-    renderCard(getAll);
+    renderCard(pagedEvents);
     fireEvent.click(screen.getByText("Run"));
 
     await waitFor(() =>
@@ -138,7 +139,7 @@ describe("paged endpoints", () => {
     );
     expect(mockSetEvents.mock.lastCall![0]).toHaveLength(4137);
     expect(
-      screen.getByText(/4,137 events loaded onto map — 3 page\(s\) of 2000/),
+      screen.getByText(/4,137 events loaded onto map from 3 page\(s\) of 2000/),
     ).toBeInTheDocument();
   });
 
@@ -161,7 +162,7 @@ describe("paged endpoints", () => {
   it("resumes from the Start Page field", async () => {
     const fetchMock = servePages(3);
 
-    renderCard(getAll);
+    renderCard(pagedEvents);
     fireEvent.change(screen.getByDisplayValue("0"), { target: { value: "1" } });
     fireEvent.click(screen.getByText("Run"));
 
@@ -204,7 +205,7 @@ describe("paged endpoints", () => {
       return jsonResponse(page(n, 10));
     });
 
-    renderCard(getAll);
+    renderCard(pagedEvents);
     fireEvent.click(screen.getByText("Run"));
 
     await waitFor(() =>
@@ -224,7 +225,7 @@ describe("paged endpoints", () => {
         return jsonResponse({ content: n < 2 ? new Array(2000).fill({}) : [] });
       });
 
-    renderCard(getAll);
+    renderCard(pagedEvents);
     fireEvent.click(screen.getByText("Run"));
 
     await waitFor(() =>
