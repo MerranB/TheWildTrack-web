@@ -8,7 +8,7 @@ import type { Hotspot } from "../types/Hotspot";
 // MapLibre to do (which sources and layers it registers, what data it pushes into
 // them) rather than on rendered DOM, because there is no DOM to inspect.
 const mocks = vi.hoisted(() => ({
-  sources: new global.Map<string, { setData: ReturnType<typeof vi.fn> }>(),
+  sources: new globalThis.Map<string, { setData: ReturnType<typeof vi.fn> }>(),
   layers: [] as string[],
   markerElements: [] as HTMLElement[],
   flyTo: vi.fn(),
