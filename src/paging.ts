@@ -1,4 +1,5 @@
 import { apiUrl } from "./api";
+import { authorizedFetch } from "./auth";
 
 export const DEFAULT_PAGE_SIZE = 2000;
 // Backstop so a malformed response can never spin the loop forever.
@@ -20,11 +21,14 @@ export interface PageResult<T> {
 /** Thrown mid-walk, carrying whatever pages were fetched before the failure. */
 export class PagingError<T> extends Error {
   partial: PageResult<T>;
+  /** HTTP status that stopped the walk, so callers can tell a 401 from a real failure. */
+  status: number | null;
 
-  constructor(message: string, partial: PageResult<T>) {
+  constructor(message: string, partial: PageResult<T>, status: number | null = null) {
     super(message);
     this.name = "PagingError";
     this.partial = partial;
+    this.status = status;
   }
 }
 
@@ -82,18 +86,20 @@ export async function fetchAllPages<T>({
 
     const page = result.nextPage;
     const { url, options } = buildRequest(page);
-    const res = await fetch(apiUrl(url), options);
+    const res = await authorizedFetch(apiUrl(url), options);
 
     if (res.status === 429) {
       throw new PagingError(
         `429 rate limited after ${result.pagesDone} page(s). The API caps calls to this endpoint per day.`,
         result,
+        res.status,
       );
     }
     if (!res.ok) {
       throw new PagingError(
         `${res.status} ${res.statusText} on page ${page}`,
         result,
+        res.status,
       );
     }
 
