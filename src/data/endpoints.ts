@@ -97,8 +97,10 @@
       {
         method: 'POST',
         path: '/api/v1/geoFence',
-        description: 'Creates a new geo-fence. Note: the scheduled alert trigger is disabled in this environment as the dataset is historical. Use the Demo endpoint to see geo-fence alerts in action.',
+        description: 'Creates a new geo-fence. Running this sends a 6 digit code to the email address you enter, and the geo-fence is not created until you enter that code below, so nobody can point an alert at an address they do not own. Note: the scheduled alert trigger is disabled in this environment as the dataset is historical. Use the Demo endpoint to see geo-fence alerts in action.',
         returnsEvents: false,
+        verifyPath: '/api/v1/verify/geoFence',
+        verifyAction: 'create the geo-fence',
         fields: [
           { key: 'name', label: 'Name', defaultValue: 'Tortola Zone', description: 'Geo-fence name' },
           { key: 'email', label: 'Email', defaultValue: 'researcher@wildtrack.com', description: 'Alert email address'
@@ -143,8 +145,10 @@
       {
         method: 'POST',
         path: '/api/v1/demo',
-        description: 'Demonstrates the geo-fence alert feature with simulated data. Since the dataset is historical, real movement events will never trigger alerts. This endpoint simulates that process so you can see the full geo-fence alert pipeline in action.',
+        description: 'Demonstrates the geo-fence alert feature with simulated data. Since the dataset is historical, real movement events will never trigger alerts. This endpoint simulates that process so you can see the full geo-fence alert pipeline in action. Running it sends a 6 digit code to your address first, and the demo alert only goes out once you enter that code below.',
         returnsEvents: false,
+        verifyPath: '/api/v1/verify/demo',
+        verifyAction: 'trigger the demo',
          fields: [ { key: 'email', label: 'Email', defaultValue: 'your@email.com', description: 'Email address to receive the demo geo-fence alert' },
   ],
    body: {
