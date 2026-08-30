@@ -15,6 +15,10 @@
     body?: Record<string, unknown>
     returnsEvents: boolean
     adminOnly?: boolean
+    /** Set when the endpoint defers its work until an emailed code is confirmed. */
+    verifyPath?: string
+    /** Completes "...to complete email verification and ___" in the code prompt. */
+    verifyAction?: string
     returnsGeoFences?: boolean
     hasCoordinates?: boolean
     paged?: boolean

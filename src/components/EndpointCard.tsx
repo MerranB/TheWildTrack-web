@@ -60,6 +60,10 @@ function EndpointCard({
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loggingIn, setLoggingIn] = useState(false);
+  const [needsCode, setNeedsCode] = useState(false);
+  const [code, setCode] = useState("");
+  const [codeError, setCodeError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const [coords, setCoords] = useState([
     { lat: "19.5", lon: "-66.0" },
     { lat: "17.5", lon: "-66.0" },
@@ -144,6 +148,14 @@ function EndpointCard({
 
       const data = await readBody(res);
       const message = statusMessage(data);
+
+      // 202 means the request is parked until the address confirms it.
+      if (res.status === 202 && endpoint.verifyPath) {
+        setNeedsCode(true);
+        setCodeError(null);
+        setResponse(message ?? "Check your email for a 6 digit code.");
+        return;
+      }
 
       if (!res.ok) {
         setResponse(
@@ -271,6 +283,44 @@ function EndpointCard({
       );
     } finally {
       setRunning(false);
+    }
+  }
+
+  /**
+   * A deferred endpoint does not do its work on the first press, it only mails a code. Calling
+   * that button "Run" would promise something the request does not deliver until confirmation.
+   */
+  function runLabel() {
+    if (!endpoint.verifyPath) return running ? "Running..." : "Run";
+    return running ? "Sending..." : "Send verification code";
+  }
+
+  async function submitCode() {
+    if (!endpoint.verifyPath) return;
+
+    setConfirming(true);
+    setCodeError(null);
+    try {
+      const res = await authorizedFetch(apiUrl(endpoint.verifyPath), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: fieldValues.email, code }),
+      });
+      const message = statusMessage(await readBody(res));
+
+      if (!res.ok) {
+        // The API says how many attempts are left, so surface it rather than a bare status.
+        setCodeError(message ?? `Error ${res.status} ${res.statusText}`);
+        return;
+      }
+
+      setNeedsCode(false);
+      setCode("");
+      setResponse(message ?? "Confirmed.");
+    } catch (err) {
+      setCodeError((err as Error).message);
+    } finally {
+      setConfirming(false);
     }
   }
 
@@ -432,6 +482,48 @@ function EndpointCard({
             </div>
           )}
 
+          {needsCode && (
+            <div
+              style={{
+                border: "1px solid #49cc90",
+                borderRadius: 4,
+                padding: 8,
+                marginBottom: 8,
+              }}
+            >
+              <p style={{ fontSize: 11, color: "#49cc90", margin: "0 0 6px" }}>
+                Please enter the 6 digit code sent to {fieldValues.email} to
+                complete email verification and {endpoint.verifyAction}.
+              </p>
+              <input
+                aria-label="Verification code"
+                placeholder="123456"
+                inputMode="numeric"
+                maxLength={6}
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && code) submitCode();
+                }}
+                className="endpoint-input"
+                style={{ marginBottom: 6 }}
+              />
+              <button
+                onClick={submitCode}
+                disabled={confirming || !code}
+                className="endpoint-run"
+                style={{ cursor: confirming ? "not-allowed" : "pointer" }}
+              >
+                {confirming ? "Running..." : "Run"}
+              </button>
+              {codeError && (
+                <p style={{ fontSize: 11, color: "#f93e3e", margin: "6px 0 0" }}>
+                  {codeError}
+                </p>
+              )}
+            </div>
+          )}
+
           {needsLogin && (
             <div
               style={{
@@ -489,7 +581,7 @@ function EndpointCard({
               cursor: running ? "not-allowed" : "pointer",
             }}
           >
-            {running ? "Running..." : "Run"}
+            {runLabel()}
           </button>
 
           {response && <div className="endpoint-response">{response}</div>}
