@@ -90,6 +90,9 @@ vi.mock("maplibre-gl", () => {
   }
 
   return {
+    // Called at module scope to pin the worker asset. It has no behaviour worth
+    // asserting here, but omitting it makes the whole module fail to import.
+    setWorkerUrl: vi.fn(),
     MapLibreMap: FakeMap,
     Marker: FakeMarker,
     Popup: FakePopup,
