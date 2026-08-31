@@ -8,14 +8,28 @@ import {
   Marker,
   NavigationControl,
   Popup,
+  setWorkerUrl,
   type GeoJSONSource,
   type MapOptions,
 } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+// MapLibre resolves its worker at runtime with new URL(`./${name}`, import.meta.url), where
+// the filename is a variable. A bundler can only emit an asset for that pattern when the
+// name is a literal, so the worker was never written into dist and production asked
+// GitHub Pages for a file that did not exist. Pages answered with its 404 page, and the
+// browser refused to start a worker from text/html.
+//
+// Everything MapLibre parses off the main thread lives in that worker: vector tiles are
+// never even requested without it, and GeoJSON sources never render. Importing it with
+// Vite's ?url suffix makes the filename a literal the bundler can see, so the file is
+// emitted and hashed like any other asset.
+import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import { apiUrl } from "../api";
 import type { Event } from "../types/Event";
 import type { GeoFence } from "../types/GeoFence";
 import type { Hotspot } from "../types/Hotspot";
+
+setWorkerUrl(maplibreWorkerUrl);
 
 // Above this zoom the hotspot pins are noise. You are already inside the data and
 // the tile layer is showing it directly.
