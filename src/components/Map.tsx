@@ -20,10 +20,12 @@ import "maplibre-gl/dist/maplibre-gl.css";
 // browser refused to start a worker from text/html.
 //
 // Everything MapLibre parses off the main thread lives in that worker: vector tiles are
-// never even requested without it, and GeoJSON sources never render. Importing it with
-// Vite's ?url suffix makes the filename a literal the bundler can see, so the file is
-// emitted and hashed like any other asset.
-import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
+// never even requested without it, and GeoJSON sources never render.
+//
+// ?worker&url rather than plain ?url. ?url copies the file verbatim, and the worker
+// statically imports ./maplibre-gl-shared.mjs, which then 404s in turn. ?worker&url makes
+// Vite bundle the worker's own dependency graph, emitting one self-contained file.
+import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { apiUrl } from "../api";
 import type { Event } from "../types/Event";
 import type { GeoFence } from "../types/GeoFence";
